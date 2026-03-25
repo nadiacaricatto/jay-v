@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jay V — Build Log</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Inter:wght@300;400;500&display=swap');
+
+  :root {
+    --bg:        #0A0E14;
+    --bg2:       #0F1520;
+    --panel:     #111822;
+    --border:    #1E2D40;
+    --border2:   #243348;
+    --green:     #4ADE80;
+    --green-dim: #0D2B1A;
+    --green-glow:#4ADE8033;
+    --blue:      #38BDF8;
+    --blue-dim:  #0A1F30;
+    --yellow:    #FBBF24;
+    --yellow-dim:#2A1E05;
+    --red:       #F87171;
+    --red-dim:   #2A0D0D;
+    --muted:     #1E3A5F;
+    --text:      #CBD5E1;
+    --text-dim:  #4A6380;
+    --text-faint:#2A3F55;
+    --cursor:    #4ADE80;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* SCANLINE overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.03) 2px,
+      rgba(0,0,0,0.03) 4px
+    );
+    pointer-events: none;
+    z-index: 999;
+  }
+
+  /* ── LAYOUT ── */
+  .wrap { max-width: 900px; margin: 0 auto; padding: 48px 24px 100px; }
+
+  /* ── TERMINAL HEADER ── */
+  .terminal-bar {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px 10px 0 0;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .dot { width: 12px; height: 12px; border-radius: 50%; }
+  .dot-r { background: #FF5F57; }
+  .dot-y { background: #FEBC2E; }
+  .dot-g { background: #28C840; }
+
+  .terminal-title {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-left: 8px;
+    letter-spacing: 0.05em;
+  }
+
+  .terminal-body {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 10px 10px;
+    padding: 32px;
+    margin-bottom: 48px;
+  }
+
+  /* ── PROMPT LINE ── */
+  .prompt {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 6px;
+    font-size: 13px;
+  }
+
+  .prompt-path { color: var(--blue); }
+  .prompt-git  { color: var(--yellow); }
+  .prompt-sym  { color: var(--green); }
+  .prompt-cmd  { color: var(--text); }
+
+  .cursor {
+    display: inline-block;
+    width: 9px;
+    height: 15px;
+    background: var(--cursor);
+    animation: blink 1.1s step-end infinite;
+    vertical-align: text-bottom;
+    margin-left: 2px;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0; }
+  }
+
+  /* ── HERO OUTPUT ── */
+  .output { margin: 20px 0 28px; }
+
+  .ascii {
+    font-size: clamp(10px, 2vw, 16px);
+    line-height: 1.2;
+    color: var(--green);
+    margin-bottom: 20px;
+    white-space: pre;
+    text-shadow: 0 0 20px var(--green-glow);
+  }
+
+  .tagline {
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+
+  .tagline span { color: var(--blue); }
+
+  /* ── STATS ROW ── */
+  .stats {
+    display: flex;
+    gap: 0;
+    margin: 28px 0;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .stat {
+    flex: 1;
+    padding: 16px 20px;
+    border-right: 1px solid var(--border);
+  }
+  .stat:last-child { border-right: none; }
+
+  .stat-label {
+    font-size: 10px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 6px;
+  }
+
+  .stat-value {
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .stat-value.green  { color: var(--green); text-shadow: 0 0 16px var(--green-glow); }
+  .stat-value.blue   { color: var(--blue); }
+  .stat-value.yellow { color: var(--yellow); }
+
+  /* ── PROGRESS BAR ── */
+  .prog-wrap {
+    margin: 24px 0 8px;
+  }
+
+  .prog-top {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+
+  .prog-bar {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .prog-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--green), var(--blue));
+    border-radius: 2px;
+    transition: width 1s cubic-bezier(.4,0,.2,1);
+  }
+
+  /* ── PHASES ── */
+  .phases { display: flex; flex-direction: column; gap: 4px; }
+
+  .phase {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+
+  .phase:hover { border-color: var(--border2); }
+
+  .phase-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--panel);
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .phase-tag {
+    font-size: 10px;
+    color: var(--text-faint);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    padding: 2px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    letter-spacing: 0.05em;
+  }
+
+  .phase-name {
+    font-size: 13px;
+    font-weight: 500;
+    flex: 1;
+    color: var(--text);
+  }
+
+  .phase-count {
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  .phase-mini-bar {
+    width: 60px;
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .phase-mini-fill {
+    height: 100%;
+    background: var(--green);
+    border-radius: 2px;
+  }
+
+  .chevron {
+    font-size: 10px;
+    color: var(--text-faint);
+    transition: transform 0.2s;
+  }
+
+  .phase.open .chevron { transform: rotate(90deg); }
+
+  /* ── ITEMS ── */
+  .items { display: none; padding: 4px 0; background: var(--bg2); }
+  .phase.open .items { display: block; }
+
+  .item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 9px 16px;
+    border-left: 2px solid transparent;
+    transition: background 0.1s, border-color 0.1s;
+  }
+
+  .item:hover { background: var(--panel); }
+
+  .item.done { border-left-color: var(--green); }
+  .item.pending-high { border-left-color: var(--red); }
+  .item.pending-med  { border-left-color: var(--yellow); }
+  .item.pending-low  { border-left-color: var(--blue); }
+  .item.pending-pos  { border-left-color: var(--text-faint); }
+
+  .item-icon {
+    font-size: 12px;
+    margin-top: 2px;
+    flex-shrink: 0;
+    width: 16px;
+    text-align: center;
+  }
+
+  .item.done .item-icon { color: var(--green); }
+  .item.pending-high .item-icon { color: var(--red); }
+  .item.pending-med  .item-icon { color: var(--yellow); }
+  .item.pending-low  .item-icon { color: var(--blue); }
+  .item.pending-pos  .item-icon { color: var(--text-faint); }
+
+  .item-body { flex: 1; min-width: 0; }
+
+  .item-text {
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  .item.done .item-text { color: var(--text-dim); text-decoration: line-through; text-decoration-color: var(--text-faint); }
+
+  .item-sub {
+    font-size: 11px;
+    color: var(--text-faint);
+    margin-top: 3px;
+    line-height: 1.5;
+    font-family: 'Inter', sans-serif;
+    font-weight: 300;
+  }
+
+  .badge {
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 10px;
+    white-space: nowrap;
+    align-self: center;
+    flex-shrink: 0;
+    letter-spacing: 0.03em;
+  }
+
+  .badge-done   { background: var(--green-dim);  color: var(--green);  }
+  .badge-alta   { background: var(--red-dim);    color: var(--red);    }
+  .badge-media  { background: var(--yellow-dim); color: var(--yellow); }
+  .badge-baixa  { background: var(--blue-dim);   color: var(--blue);   }
+  .badge-pos    { background: var(--border);     color: var(--text-dim); }
+
+  /* ── WARN BOX ── */
+  .warn {
+    margin: 4px 16px 8px 44px;
+    padding: 10px 14px;
+    background: var(--yellow-dim);
+    border: 1px solid #5A3E0A;
+    border-left: 3px solid var(--yellow);
+    border-radius: 6px;
+    font-size: 11px;
+  }
+
+  .warn-title { color: var(--yellow); font-weight: 500; margin-bottom: 4px; }
+  .warn-text  { color: #A07830; line-height: 1.5; font-family: 'Inter', sans-serif; font-weight: 300; }
+
+  /* ── FOOTER ── */
+  .footer-line {
+    margin-top: 48px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    color: var(--text-faint);
+  }
+
+  .footer-line a {
+    color: var(--blue);
+    text-decoration: none;
+  }
+  .footer-line a:hover { text-decoration: underline; }
+
+  /* ── EXPAND ALL ── */
+  .btn-expand {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    padding: 5px 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-bottom: 12px;
+  }
+
+  .btn-expand:hover { border-color: var(--green); color: var(--green); }
+
+  @media (max-width: 600px) {
+    .ascii { font-size: 8px; }
+    .stats { flex-wrap: wrap; }
+    .stat { min-width: 50%; border-right: none; border-bottom: 1px solid var(--border); }
+    .stat:last-child { border-bottom: none; }
+    .phase-mini-bar { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- TERMINAL WINDOW -->
+  <div class="terminal-bar">
+    <div class="dot dot-r"></div>
+    <div class="dot dot-y"></div>
+    <div class="dot dot-g"></div>
+    <span class="terminal-title">jay-v — build log</span>
+  </div>
+
+  <div class="terminal-body">
+
+    <div class="prompt">
+      <span class="prompt-path">~/jay-v</span>
+      <span class="prompt-git">git:(develop)</span>
+      <span class="prompt-sym">❯</span>
+      <span class="prompt-cmd">cat BUILD_LOG.md</span>
+    </div>
+
+    <div class="output">
+      <div class="ascii">
+     ██╗ █████╗ ██╗   ██╗    ██╗   ██╗
+     ██║██╔══██╗╚██╗ ██╔╝    ██║   ██║
+     ██║███████║ ╚████╔╝     ██║   ██║
+██   ██║██╔══██║  ╚██╔╝      ╚██╗ ██╔╝
+╚█████╔╝██║  ██║   ██║        ╚████╔╝
+ ╚════╝ ╚═╝  ╚═╝   ╚═╝         ╚═══╝  </div>
+
+      <div class="tagline">// Plataforma de aprendizado de Java com <span>agente de IA</span></div>
+      <div class="tagline">// Stack: <span>Spring Boot</span> · <span>React + TS</span> · <span>PostgreSQL</span> · <span>Claude API</span></div>
+    </div>
+
+    <!-- STATS -->
+    <div class="stats" id="stats-row">
+      <div class="stat">
+        <div class="stat-label">progresso</div>
+        <div class="stat-value green" id="s-pct">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">concluídos</div>
+        <div class="stat-value blue" id="s-done">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">pendentes</div>
+        <div class="stat-value yellow" id="s-pending">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">fases</div>
+        <div class="stat-value" id="s-phases" style="color:var(--text)">—</div>
+      </div>
+    </div>
+
+    <div class="prog-wrap">
+      <div class="prog-top">
+        <span>// build progress</span>
+        <span id="bar-label">0%</span>
+      </div>
+      <div class="prog-bar">
+        <div class="prog-fill" id="bar" style="width:0%"></div>
+      </div>
+    </div>
+
+    <div class="prompt" style="margin-top: 28px;">
+      <span class="prompt-path">~/jay-v</span>
+      <span class="prompt-git">git:(develop)</span>
+      <span class="prompt-sym">❯</span>
+      <span class="prompt-cmd">./show_roadmap.sh<span class="cursor"></span></span>
+    </div>
+
+  </div>
+
+  <!-- ROADMAP -->
+  <button class="btn-expand" onclick="toggleAll()">▶ expandir todas as fases</button>
+
+  <div class="phases" id="phases"></div>
+
+  <div class="footer-line">
+    <span>Jay V · build in public · Campinas, SP · 2026</span>
+    <span><a href="https://github.com/nadiacaricatto/jay-v" target="_blank">github.com/nadiacaricatto/jay-v</a></span>
+  </div>
+
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+//  DADOS — edite aqui para atualizar a página
+// ─────────────────────────────────────────────
+const PHASES = [
+  {
+    tag: "FASE 0",
+    name: "Especificação e Planejamento",
+    items: [
+      { text: "Arquitetura do sistema definida", sub: "Frontend React+TS · Backend Spring Boot · PostgreSQL · Piston API · Claude API", done: true },
+      { text: "Stack tecnológica definida", sub: "Vercel (frontend) · Render (backend) · monorepo GitHub", done: true },
+      { text: "Modos de aprendizado definidos", sub: "Modo Aventura (gamificado) e Modo Trilha (estruturado)", done: true },
+      { text: "Perfil completo do agente Jay V documentado", sub: "Identidade, personalidade, modos de atuação, limites de domínio", done: true },
+      { text: "Ferramentas do agente formalizadas", sub: "11 ferramentas: universais, Modo Aventura e segurança/bem-estar", done: true },
+      { text: "Diretrizes de segurança e bem-estar definidas", sub: "Detecção de crise · threshold · princípio do gelo · camada permanente", done: true },
+      { text: "Documentação técnica gerada", sub: "JayV_Documentacao_v02.docx — guia técnico completo", done: true },
+      { text: "Estrutura dos módulos de Java", sub: "Número de módulos, sequência, critérios de progressão — necessário para select_next_exercise", done: false, priority: "alta" },
+      { text: "System prompt completo do Jay V", sub: "O perfil está documentado — o prompt técnico ainda precisa ser escrito e testado", done: false, priority: "alta" },
+      { text: "Decisão: XP é preservado ou resetado na troca de modo?", sub: "Impacta o modelo de dados — decidir antes de implementar pontuação", done: false, priority: "alta",
+        warn: { title: "Decisão pendente", text: "A troca de modo está definida como imediata, mas o comportamento do XP nunca foi especificado. Resolver antes de codar o sistema de pontuação." } },
+    ]
+  },
+  {
+    tag: "FASE 1",
+    name: "Scaffold e Configuração",
+    items: [
+      { text: "Repositório monorepo criado no GitHub", sub: "jay-v · branch padrão: develop · main protegida com Ruleset", done: true },
+      { text: ".gitignore configurado", sub: "Merge de padrões Java/Maven + Node/React", done: true },
+      { text: "Backend Spring Boot inicializado", sub: "Java 21 · Maven · Spring Web + Data JPA + Security + PostgreSQL + Lombok + Validation", done: true },
+      { text: "Frontend React + TypeScript inicializado", sub: "Vite + React + TS via npm create vite@latest", done: true },
+      { text: "PostgreSQL local configurado", sub: "PostgreSQL 18 · database jayv criada via pgAdmin", done: true },
+      { text: "application.properties configurado", sub: "Conexão com banco · JPA · open-in-view=false", done: true },
+      { text: "Backend rodando localmente :8080", done: true },
+      { text: "Frontend rodando localmente :5173", done: true },
+      { text: "Scaffold completo commitado em develop", done: true },
+    ]
+  },
+  {
+    tag: "FASE 2",
+    name: "Modelagem de Dados e Entidades",
+    items: [
+      { text: "Entidades JPA definidas", sub: "User · StudentProfile · Competency · Exercise · ProgressRecord · SafetyEvent", done: false, priority: "alta" },
+      { text: "Schema do banco de dados criado", done: false, priority: "alta" },
+      { text: "Repositories Spring Data criados", done: false, priority: "alta" },
+      { text: "Estratégia de migrations definida", sub: "Flyway ou Liquibase — ou DDL auto para MVP", done: false, priority: "media" },
+    ]
+  },
+  {
+    tag: "FASE 3",
+    name: "Autenticação e Usuários",
+    items: [
+      { text: "JWT + Spring Security configurados", done: false, priority: "alta" },
+      { text: "Endpoints de autenticação", sub: "POST /auth/register · POST /auth/login · GET /auth/me", done: false, priority: "alta" },
+      { text: "Formulário de onboarding", sub: "Experiência prévia · linguagens · objetivo · disponibilidade · modo preferido", done: false, priority: "alta" },
+      { text: "Jay V processa formulário e monta trilha inicial", done: false, priority: "alta" },
+    ]
+  },
+  {
+    tag: "FASE 4",
+    name: "Integração Claude API (Jay V)",
+    items: [
+      { text: "Integração com Claude API configurada", sub: "HTTP client · chave de API · endpoint /v1/messages", done: false, priority: "alta" },
+      { text: "Serviço de montagem de payload de contexto", sub: "Perfil + progresso + competências + alertas de segurança", done: false, priority: "alta" },
+      { text: "Ferramentas universais implementadas", sub: "get_student_profile · update_competency · select_next_exercise · evaluate_code · generate_hint...", done: false, priority: "alta" },
+      { text: "Ferramentas do Modo Aventura", sub: "award_xp · unlock_achievement · get_ranking · update_streak", done: false, priority: "media" },
+      { text: "Ferramentas de segurança e bem-estar", sub: "get_safety_profile · log_safety_event · update_wellbeing_mode", done: false, priority: "alta" },
+    ]
+  },
+  {
+    tag: "FASE 5",
+    name: "Execução de Código (Piston API)",
+    items: [
+      { text: "Integração com Piston API", sub: "Endpoint de execução · linguagem Java · timeout configurado", done: false, priority: "alta" },
+      { text: "Resultado da execução incluído no contexto do Jay V", done: false, priority: "alta" },
+      { text: "Tratamento de falha da Piston API", sub: "Loading state · mensagem amigável · retry", done: false, priority: "media" },
+    ]
+  },
+  {
+    tag: "FASE 6",
+    name: "Frontend — Implementação",
+    items: [
+      { text: "Telas de cadastro e login", done: false, priority: "alta" },
+      { text: "Tela de onboarding", done: false, priority: "alta" },
+      { text: "Editor Monaco integrado", sub: "Syntax highlight Java · execução via Piston · exibição de resultado", done: false, priority: "alta" },
+      { text: "Interface de chat com Jay V", sub: "Histórico de mensagens · input · loading state", done: false, priority: "alta" },
+      { text: "Painel de trilha e progresso", sub: "Módulos · exercícios · status de cada item", done: false, priority: "alta" },
+      { text: "Termômetro de competências", done: false, priority: "media" },
+      { text: "Componentes do Modo Aventura", sub: "XP · streak · conquistas · ranking", done: false, priority: "media" },
+    ]
+  },
+  {
+    tag: "PÓS-MVP",
+    name: "Funcionalidades Futuras",
+    items: [
+      { text: "Simulação de entrevista técnica", sub: "simulate_interview · evaluate_interview_answer", done: false, priority: "pos" },
+      { text: "Diagnóstico de empregabilidade", sub: "generate_employability_report", done: false, priority: "pos" },
+      { text: "Dados de comunidade para normalização de erros", sub: "Benchmarks de padrão de erro por tópico", done: false, priority: "pos" },
+      { text: "Thresholds de bem-estar configuráveis", sub: "Hardcoded aceitável no MVP", done: false, priority: "pos" },
+    ]
+  },
+];
+
+// ─────────────────────────────────────────────
+//  RENDER
+// ─────────────────────────────────────────────
+function iconFor(item) {
+  if (item.done) return '✓';
+  const map = { alta: '!', media: '~', baixa: '·', pos: '○' };
+  return map[item.priority] || '·';
+}
+
+function classFor(item) {
+  if (item.done) return 'done';
+  const map = { alta: 'pending-high', media: 'pending-med', baixa: 'pending-low', pos: 'pending-pos' };
+  return map[item.priority] || 'pending-pos';
+}
+
+function badgeFor(item) {
+  if (item.done) return '<span class="badge badge-done">done</span>';
+  const map = { alta: 'badge-alta', media: 'badge-media', baixa: 'badge-baixa', pos: 'badge-pos' };
+  const label = { alta: 'prioridade alta', media: 'prioridade média', baixa: 'prioridade baixa', pos: 'pós-MVP' };
+  if (!item.priority) return '';
+  return `<span class="badge ${map[item.priority]}">${label[item.priority]}</span>`;
+}
+
+function render() {
+  let totalDone = 0, totalAll = 0;
+
+  const html = PHASES.map((phase, pi) => {
+    const done = phase.items.filter(i => i.done).length;
+    const total = phase.items.length;
+    totalDone += done;
+    totalAll  += total;
+    const pct = total > 0 ? Math.round(done / total * 100) : 0;
+
+    const itemsHtml = phase.items.map(item => {
+      const warnHtml = item.warn
+        ? `<div class="warn"><div class="warn-title">⚠ ${item.warn.title}</div><div class="warn-text">${item.warn.text}</div></div>`
+        : '';
+      return `
+        <div class="item ${classFor(item)}">
+          <div class="item-icon">${iconFor(item)}</div>
+          <div class="item-body">
+            <div class="item-text">${item.text}</div>
+            ${item.sub ? `<div class="item-sub">${item.sub}</div>` : ''}
+          </div>
+          ${badgeFor(item)}
+        </div>
+        ${warnHtml}
+      `;
+    }).join('');
+
+    const isOpen = pi <= 1; // Fases 0 e 1 abertas por padrão
+    return `
+      <div class="phase ${isOpen ? 'open' : ''}" id="phase-${pi}">
+        <div class="phase-head" onclick="togglePhase(${pi})">
+          <span class="phase-tag">${phase.tag}</span>
+          <span class="phase-name">${phase.name}</span>
+          <span class="phase-count">${done}/${total}</span>
+          <div class="phase-mini-bar"><div class="phase-mini-fill" style="width:${pct}%"></div></div>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="items">${itemsHtml}</div>
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('phases').innerHTML = html;
+
+  const pct = totalAll > 0 ? Math.round(totalDone / totalAll * 100) : 0;
+  document.getElementById('s-pct').textContent = pct + '%';
+  document.getElementById('s-done').textContent = totalDone;
+  document.getElementById('s-pending').textContent = totalAll - totalDone;
+  document.getElementById('s-phases').textContent = PHASES.length;
+  document.getElementById('bar').style.width = pct + '%';
+  document.getElementById('bar-label').textContent = pct + '%';
+}
+
+function togglePhase(i) {
+  document.getElementById('phase-' + i).classList.toggle('open');
+}
+
+let allOpen = false;
+function toggleAll() {
+  allOpen = !allOpen;
+  PHASES.forEach((_, i) => {
+    const el = document.getElementById('phase-' + i);
+    if (allOpen) el.classList.add('open');
+    else el.classList.remove('open');
+  });
+  document.querySelector('.btn-expand').textContent = allOpen
+    ? '▼ recolher todas as fases'
+    : '▶ expandir todas as fases';
+}
+
+render();
+</script>
+</body>
+</html>
