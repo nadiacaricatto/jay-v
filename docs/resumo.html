@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR"> 
+
+    <head> 
+
+        <meta charset="UTF-8">
+
+        <title> ENTENDENDO HTML </title>
+
+    </head>
+
+        <body> 
+
+            <h1> Começando pelo básico: O que é HTML, porquê usar e como funciona </h1>
+                
+                <h2> O que é HTML: </h2>
+                    <p> HTML é a sigla para HyperText Markup Languagem - em pt-BR, Linguagem de Marcação de Hipertexto. <br>
+                    É uma linguagem de código - e não de programação! - declarativa, ou seja, descreve a estrutura e significado do conteúdo de uma página. <br>
+                    Por não ser uma linguagem de programação, HTML nunca será usado para definir o que fazer com cada elemento - só vamos definir o que é cada um. </p> 
+                
+                <h2> Porquê HTML: </h2>
+                    <p> Sem ele, o navegador eixibira um texto plano, sem qualquer hierarquia ou organização visual. <br> 
+                    Em outras palavras: sites como conhecemos - imagens, links, formulários etc. - não existiriam. <br> 
+                    Pensa em qualquer coisa. <br> 
+                    Pensou? <br> 
+                    Pois é, sem HTML não dá pra executar nada disso. </p>
+
+                <h2> Como funciona: </h2>
+                    <p> HTML funciona, principalmente, com o uso de tags - ou marcadores: elas envolvem o conteúdo num abracinho e falam pro navegador "Esse conteúdo representa [qualquer coisa]". <br>
+                    Tags devem ser abertas &lt; e fechadas &gt; - e podem ter atributos ou informações adicionais. <br>
+                    A gente consegue montar um site inteiro com HTML então? <br> 
+                    Sim e não. <br>
+                    Ele é o esqueleto do site, então a grosso modo, a gente consegue sim montar um site! <br>
+                    O problema é que o visual seria exatamente como você tá vendo essa página: xoxa, capenga, anêmica.<br> 
+                    A grande limitação do HTML é que, sozinho, ele nunca vai entregar nada bonito, e muito menos comportamento dinâmico. <br> 
+                    E é por isso que pra construir o visual e definir o que fazer a gente usa outras linguagens (CSS, TypeScript, React, JavaScript etc.).</p>
+                        
+                <h1> Agora que você entendeu, vamos ver a estrutura básica de uma página HTML! </h1>
+
+                <h2> Vamos linha por linha: </h2>
+
+                <h3> Configurando a página: </h3>
+
+                <p> #1: &lt;!DOCTYPE html&gt; é a primeira linha de código da página, e indica que o navegador deve renderiazar o conteúdo em HTML moderno! <br> 
+                    Essa indicação evita que o site carregue todo torto - e mais feio ainda. <br>
+                    <br>
+                    #2: &lt;html lang = "pt-BR"&gt; define a linguagem da página - nesse caso, português brasileiro - mas poderia ser qualquer outra. <br>
+                    <br>
+                    #3: &lt;head&gt; é um contâiner, invisível pros usuários. Sua função não é visual, e sim informações (metadados, links para scripts, folhas de estilo etc.) sobre a página.<br>
+                    <br>
+                    #4: &lt;meta charset="UTF-8"&gt; é um exemplo de metadado inserido dentro da tag head: ele define a forma de codificação dos caracteres. <br> 
+                    UTF-8 é o padrão universal usado em sites, e garante que acentos e símbolos sejam exibidos da forma correta. Sem UTF-8, à viraria Ã©, ç viraria ã... 
+                    <br>
+                    #5: &lt;title&gt; é a tag que define o nome - ou título - que aparece na aba do navegador para o usuário &lt;/title&gt; <br>
+                    Lembra que eu disse que toda tag fecha e abre? Fizemos exatamente isso com o title! e agora vamos fechar a head: <br>
+                    <br>
+                    #6: E já que colocamos todas as informações que a gente queria dentro da head, é hora de fechar a tag: <br>
+                    &lt;/head&gt; <br>
+                    <br>
+                    Agora pra fechar, o código final da nossa configuração ficaria assim: <br>
+<pre><code>
+&lt;!DOCTYPE html&gt;
+                    
+    &lt;html lang="pt-BR"&gt;
+                    
+        &lt;head&gt;
+                        
+            &lt;meta charset="UTF-8"&gt;
+                            
+            &lt;title&gt; ENTENDENDO HTML &lt;/title&gt;
+                            
+        &lt;/head&gt;
+                        
+</code></pre>
+
+
+                    Contâiner fechado, é hora de começar a definir o &lt;body&gt; da página! <br>
+                </p>
+
+                <h3> Definindo o conteúdo visível da página com &lt;body&gt; </h3>
+                <p> O conteúdo visível é tudo que o usuário vai... ver. <br>
+                    Exemplos do que o body carrega: títulos, parágrafos, listas, divisões, rodapé, cabeçallho, menu, imagens, links, formulários...
+
+
+
+                </p>
+
+                    
+
+
+                    
+
+
+
+
+
+
+                
+
+
+            </body>
+
+        
